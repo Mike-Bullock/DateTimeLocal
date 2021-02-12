@@ -9,7 +9,7 @@ Extends all DateTime class functions.
 Added function getLocalTimezone() which returns local timezone.
 
 Simple test.php
-
+  <pre>
   require("DateTimeLocal.php");
 
   $dtNow = new DateTimeLocal();
@@ -17,9 +17,11 @@ Simple test.php
   echo $dtNow->format("Ymd H:i:s.u") . "\n";
   echo "Local Timezone: " . $dtNow->getLocalTimezone() , "\n";
   echo "Timezone Offset: " . ($dtNow->getOffset()/3600) . "\n";
-
+  </pre>
 Returned data: 
+  <pre>
   php test.php 
   20210212 13:17:05.370913
   Local Timezone: America/New_York
   Timezone Offset: -5
+  </pre>
