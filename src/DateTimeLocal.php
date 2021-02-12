@@ -1,8 +1,12 @@
 <?
 class DateTimeLocal extends DateTime {
+	private $LocalTimezone;
+
 	public function __construct($time = "now") {
 		// Get local timezone in linux format.
 		$LinuxTZ = $this->getLocalLinuxTimezone();
+
+		$this->LocalTimezone = $LinuxTZ;
 
 		if ($time == "now") {
 			// Get local time in microseconds (Source: https://stackoverflow.com/questions/33691428/datetime-with-microseconds)
@@ -17,6 +21,9 @@ class DateTimeLocal extends DateTime {
 		$this->setTimezone(new DateTimeZone($LinuxTZ));
 	}
 
+	public function getLocalTimezone() {
+		return $this->LocalTimezone;
+	}
 
 
 	private function getLocalLinuxTimezone() {
@@ -43,23 +50,38 @@ class DateTimeLocal extends DateTime {
 				return false;
 			}
 			return $LinuxTZ;
-		} else if (PHP_OS == "LINUX") { // Linux
+		} else if (!strcasecmp(PHP_OS,"LINUX")) { // Linux
 
-			if (is_file("/etc/timezone")) { // see if /etc/timezone exists
-				$ret = @file_get_contents("/etc/timezone");
-				if ($ret !== false) {
-					return $ret;
+			// see if /etc/timezone exists
+			if (is_file("/etc/timezone")) {
+				$LinuxTZ = @file_get_contents("/etc/timezone");
+				if ($LinuxTZ !== false) {
+					$LinuxTZ = trim(rtrim($LinuxTZ));
+					if (strlen($LinuxTZ) > 0) {
+						return $LinuxTZ;
+					}
 				}
 			}
 
-			// date +%z : returns local timezone offset from GMT - i.e. "-0500"
+			// See if timedatectl exists and extract timezone
+			if (!empty(shell_exec("which timedatectl"))) {
+				exec("timedatectl", $CmdOutputArray, $CmdRetVal);
+				if ($CmdRetVal == 0) { // timedatectl success
+					foreach ($CmdOutputArray as $CmdLine) {
+						$CmdLine = trim(rtrim($CmdLine));
+						$ret = preg_match("/Time zone: (.+)\/(.+) \(/", $CmdLine, $matches); // extract timezone
+						if ($ret && (count($matches) == 3)) {
+							return $matches[1] . "/" . $matches[2];
+						}
+					}
+				}
+			}
 
-
+			throw new Exception("No method found to extract local timezone");
 		} else {
 			throw new Exception("Unhandled OS '" . PHP_OS . "'");
 		}
 	}
-
 	private function WinToLinuxTZ($WinTZ) {
 		// Source: https://gist.github.com/dejanstojanovic/75808fe04453988bd2960707a6ff7e4a
 		// Converted from json to PHP array
